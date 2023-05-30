@@ -4,8 +4,10 @@
  * Version            : V1.2
  * Date               : 2021/11/17
  * Description
+ *********************************************************************************
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * SPDX-License-Identifier: Apache-2.0
+ * Attention: This software (modified or not) and binary are used for 
+ * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
 #include "CH58x_common.h"
@@ -13,9 +15,9 @@
 /*********************************************************************
  * @fn      SetSysClock
  *
- * @brief   ï¿½ï¿½ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½
+ * @brief   ÅäÖÃÏµÍ³ÔËÐÐÊ±ÖÓ
  *
- * @param   sc      - ÏµÍ³Ê±ï¿½ï¿½Ô´Ñ¡ï¿½ï¿½ refer to SYS_CLKTypeDef
+ * @param   sc      - ÏµÍ³Ê±ÖÓÔ´Ñ¡Ôñ refer to SYS_CLKTypeDef
  *
  * @return  none
  */
@@ -23,18 +25,14 @@ __HIGH_CODE
 void SetSysClock(SYS_CLKTypeDef sc)
 {
     uint32_t i;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-    SAFEOPERATE;
+    sys_safe_access_enable();
     R8_PLL_CONFIG &= ~(1 << 5); //
-    R8_SAFE_ACCESS_SIG = 0;
+    sys_safe_access_disable();
     if(sc & 0x20)
     { // HSE div
         if(!(R8_HFCK_PWR_CTRL & RB_CLK_XT32M_PON))
         {
-            R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-            R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-            SAFEOPERATE;
+            sys_safe_access_enable();
             R8_HFCK_PWR_CTRL |= RB_CLK_XT32M_PON; // HSE power on
             for(i = 0; i < 1200; i++)
             {
@@ -43,29 +41,24 @@ void SetSysClock(SYS_CLKTypeDef sc)
             }
         }
 
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-        SAFEOPERATE;
+        sys_safe_access_enable();
         R16_CLK_SYS_CFG = (0 << 6) | (sc & 0x1f);
         __nop();
         __nop();
         __nop();
         __nop();
-        R8_SAFE_ACCESS_SIG = 0;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
+        sys_safe_access_disable();
+        sys_safe_access_enable();
         SAFEOPERATE;
         R8_FLASH_CFG = 0X51;
-        R8_SAFE_ACCESS_SIG = 0;
+        sys_safe_access_disable();
     }
 
     else if(sc & 0x40)
     { // PLL div
         if(!(R8_HFCK_PWR_CTRL & RB_CLK_PLL_PON))
         {
-            R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-            R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-            SAFEOPERATE;
+            sys_safe_access_enable();
             R8_HFCK_PWR_CTRL |= RB_CLK_PLL_PON; // PLL power on
             for(i = 0; i < 2000; i++)
             {
@@ -73,40 +66,41 @@ void SetSysClock(SYS_CLKTypeDef sc)
                 __nop();
             }
         }
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-        SAFEOPERATE;
+        sys_safe_access_enable();
         R16_CLK_SYS_CFG = (1 << 6) | (sc & 0x1f);
         __nop();
         __nop();
         __nop();
         __nop();
-        R8_SAFE_ACCESS_SIG = 0;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-        SAFEOPERATE;
-        R8_FLASH_CFG = 0X52;
-        R8_SAFE_ACCESS_SIG = 0;
+        sys_safe_access_disable();
+        if(sc == CLK_SOURCE_PLL_80MHz)
+        {
+            sys_safe_access_enable();
+            R8_FLASH_CFG = 0X02;
+            sys_safe_access_disable();
+        }
+        else
+        {
+            sys_safe_access_enable();
+            R8_FLASH_CFG = 0X52;
+            sys_safe_access_disable();
+        }
     }
     else
     {
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-        R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-        SAFEOPERATE;
+        sys_safe_access_enable();
         R16_CLK_SYS_CFG |= RB_CLK_SYS_MOD;
     }
-    //ï¿½ï¿½ï¿½ï¿½FLASH clkï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-    SAFEOPERATE;
+    //¸ü¸ÄFLASH clkµÄÇý¶¯ÄÜÁ¦
+    sys_safe_access_enable();
     R8_PLL_CONFIG |= 1 << 7;
-    R8_SAFE_ACCESS_SIG = 0;
+    sys_safe_access_disable();
 }
 
 /*********************************************************************
  * @fn      GetSysClock
  *
- * @brief   ï¿½ï¿½È¡ï¿½ï¿½Ç°ÏµÍ³Ê±ï¿½ï¿½
+ * @brief   »ñÈ¡µ±Ç°ÏµÍ³Ê±ÖÓ
  *
  * @param   none
  *
@@ -118,15 +112,15 @@ uint32_t GetSysClock(void)
 
     rev = R16_CLK_SYS_CFG & 0xff;
     if((rev & 0x40) == (0 << 6))
-    { // 32Mï¿½ï¿½ï¿½Ð·ï¿½Æµ
+    { // 32M½øÐÐ·ÖÆµ
         return (32000000 / (rev & 0x1f));
     }
     else if((rev & RB_CLK_SYS_MOD) == (1 << 6))
-    { // PLLï¿½ï¿½ï¿½Ð·ï¿½Æµ
+    { // PLL½øÐÐ·ÖÆµ
         return (480000000 / (rev & 0x1f));
     }
     else
-    { // 32Kï¿½ï¿½ï¿½ï¿½Æµ
+    { // 32K×öÖ÷Æµ
         return (32000);
     }
 }
@@ -134,11 +128,11 @@ uint32_t GetSysClock(void)
 /*********************************************************************
  * @fn      SYS_GetInfoSta
  *
- * @brief   ï¿½ï¿½È¡ï¿½ï¿½Ç°ÏµÍ³ï¿½ï¿½Ï¢×´Ì¬
+ * @brief   »ñÈ¡µ±Ç°ÏµÍ³ÐÅÏ¢×´Ì¬
  *
  * @param   i       - refer to SYS_InfoStaTypeDef
  *
- * @return  ï¿½Ç·ï¿½ï¿½ï¿½
+ * @return  ÊÇ·ñ¿ªÆô
  */
 uint8_t SYS_GetInfoSta(SYS_InfoStaTypeDef i)
 {
@@ -155,7 +149,7 @@ uint8_t SYS_GetInfoSta(SYS_InfoStaTypeDef i)
 /*********************************************************************
  * @fn      SYS_ResetExecute
  *
- * @brief   Ö´ï¿½ï¿½ÏµÍ³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î»
+ * @brief   Ö´ÐÐÏµÍ³Èí¼þ¸´Î»
  *
  * @param   none
  *
@@ -165,19 +159,17 @@ __HIGH_CODE
 void SYS_ResetExecute(void)
 {
     FLASH_ROM_SW_RESET();
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-    SAFEOPERATE;
+    sys_safe_access_enable();
     R8_RST_WDOG_CTRL |= RB_SOFTWARE_RESET;
-    R8_SAFE_ACCESS_SIG = 0;
+    sys_safe_access_disable();
 }
 
 /*********************************************************************
  * @fn      SYS_DisableAllIrq
  *
- * @brief   ï¿½Ø±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ð¶ï¿½Öµ
+ * @brief   ¹Ø±ÕËùÓÐÖÐ¶Ï£¬²¢±£Áôµ±Ç°ÖÐ¶ÏÖµ
  *
- * @param   pirqv   - ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Öµ
+ * @param   pirqv   - µ±Ç°±£ÁôÖÐ¶ÏÖµ
  *
  * @return  none
  */
@@ -191,9 +183,9 @@ void SYS_DisableAllIrq(uint32_t *pirqv)
 /*********************************************************************
  * @fn      SYS_RecoverIrq
  *
- * @brief   ï¿½Ö¸ï¿½Ö®Ç°ï¿½Ø±Õµï¿½ï¿½Ð¶ï¿½Öµ
+ * @brief   »Ö¸´Ö®Ç°¹Ø±ÕµÄÖÐ¶ÏÖµ
  *
- * @param   irq_status  - ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Öµ
+ * @param   irq_status  - µ±Ç°±£ÁôÖÐ¶ÏÖµ
  *
  * @return  none
  */
@@ -206,11 +198,11 @@ void SYS_RecoverIrq(uint32_t irq_status)
 /*********************************************************************
  * @fn      SYS_GetSysTickCnt
  *
- * @brief   ï¿½ï¿½È¡ï¿½ï¿½Ç°ÏµÍ³(SYSTICK)ï¿½ï¿½ï¿½ï¿½Öµ
+ * @brief   »ñÈ¡µ±Ç°ÏµÍ³(SYSTICK)¼ÆÊýÖµ
  *
  * @param   none
  *
- * @return  ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Öµ
+ * @return  µ±Ç°¼ÆÊýÖµ
  */
 uint32_t SYS_GetSysTickCnt(void)
 {
@@ -223,57 +215,61 @@ uint32_t SYS_GetSysTickCnt(void)
 /*********************************************************************
  * @fn      WWDG_ITCfg
  *
- * @brief   ï¿½ï¿½ï¿½Å¹ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½Ê¹ï¿½ï¿½
+ * @brief   ¿´ÃÅ¹·¶¨Ê±Æ÷Òç³öÖÐ¶ÏÊ¹ÄÜ
  *
- * @param   s       - ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ð¶ï¿½
+ * @param   s       - Òç³öÊÇ·ñÖÐ¶Ï
  *
  * @return  none
  */
 void WWDG_ITCfg(FunctionalState s)
 {
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-    SAFEOPERATE;
+    uint8_t ctrl = R8_RST_WDOG_CTRL;
+
     if(s == DISABLE)
     {
-        R8_RST_WDOG_CTRL &= ~RB_WDOG_INT_EN;
+        ctrl &= ~RB_WDOG_INT_EN;
     }
     else
     {
-        R8_RST_WDOG_CTRL |= RB_WDOG_INT_EN;
+        ctrl |= RB_WDOG_INT_EN;
     }
-    R8_SAFE_ACCESS_SIG = 0;
+
+    sys_safe_access_enable();
+    R8_RST_WDOG_CTRL = ctrl;
+    sys_safe_access_disable();
 }
 
 /*********************************************************************
  * @fn      WWDG_ResetCfg
  *
- * @brief   ï¿½ï¿½ï¿½Å¹ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½
+ * @brief   ¿´ÃÅ¹·¶¨Ê±Æ÷¸´Î»¹¦ÄÜ
  *
- * @param   s       - ï¿½ï¿½ï¿½ï¿½Ç·ï¿½Î»
+ * @param   s       - Òç³öÊÇ·ñ¸´Î»
  *
  * @return  none
  */
 void WWDG_ResetCfg(FunctionalState s)
 {
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-    SAFEOPERATE;
+    uint8_t ctrl = R8_RST_WDOG_CTRL;
+
     if(s == DISABLE)
     {
-        R8_RST_WDOG_CTRL &= ~RB_WDOG_RST_EN;
+        ctrl &= ~RB_WDOG_RST_EN;
     }
     else
     {
-        R8_RST_WDOG_CTRL |= RB_WDOG_RST_EN;
+        ctrl |= RB_WDOG_RST_EN;
     }
-    R8_SAFE_ACCESS_SIG = 0;
+
+    sys_safe_access_enable();
+    R8_RST_WDOG_CTRL = ctrl;
+    sys_safe_access_disable();
 }
 
 /*********************************************************************
  * @fn      WWDG_ClearFlag
  *
- * @brief   ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å¹ï¿½ï¿½Ð¶Ï±ï¿½Ö¾ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½ÖµÒ²ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @brief   Çå³ý¿´ÃÅ¹·ÖÐ¶Ï±êÖ¾£¬ÖØÐÂ¼ÓÔØ¼ÆÊýÖµÒ²¿ÉÇå³ý
  *
  * @param   none
  *
@@ -281,17 +277,15 @@ void WWDG_ResetCfg(FunctionalState s)
  */
 void WWDG_ClearFlag(void)
 {
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-    R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-    SAFEOPERATE;
+    sys_safe_access_enable();
     R8_RST_WDOG_CTRL |= RB_WDOG_INT_FLAG;
-    R8_SAFE_ACCESS_SIG = 0;
+    sys_safe_access_disable();
 }
 
 /*********************************************************************
  * @fn      HardFault_Handler
  *
- * @brief   Ó²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶Ï£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¸ï¿½Î»ï¿½ï¿½ï¿½ï¿½Î»ï¿½ï¿½ï¿½ï¿½Îªï¿½Ïµç¸´Î»
+ * @brief   Ó²¼þ´íÎóÖÐ¶Ï£¬½øÈëºóÖ´ÐÐ¸´Î»£¬¸´Î»ÀàÐÍÎªÉÏµç¸´Î»
  *
  * @param   none
  *
@@ -299,24 +293,24 @@ void WWDG_ClearFlag(void)
  */
 __INTERRUPT
 __HIGH_CODE
+__attribute__((weak))
 void HardFault_Handler(void)
 {
-     FLASH_ROM_SW_RESET();
-     R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG1;
-     R8_SAFE_ACCESS_SIG = SAFE_ACCESS_SIG2;
-     SAFEOPERATE;
-     R16_INT32K_TUNE = 0xFFFF;
-     R8_RST_WDOG_CTRL |= RB_SOFTWARE_RESET;
-     R8_SAFE_ACCESS_SIG = 0;
+    FLASH_ROM_SW_RESET();
+    sys_safe_access_enable();
+    R16_INT32K_TUNE = 0xFFFF;
+    sys_safe_access_enable();
+    R8_RST_WDOG_CTRL |= RB_SOFTWARE_RESET;
+    sys_safe_access_disable();
     while(1);
 }
 
 /*********************************************************************
  * @fn      mDelayuS
  *
- * @brief   uS ï¿½ï¿½Ê±
+ * @brief   uS ÑÓÊ±
  *
- * @param   t       - Ê±ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param   t       - Ê±¼ä²ÎÊý
  *
  * @return  none
  */
@@ -324,7 +318,9 @@ __HIGH_CODE
 void mDelayuS(uint16_t t)
 {
     uint32_t i;
-#if(FREQ_SYS == 60000000)
+#if(FREQ_SYS == 80000000)
+    i = t * 20;
+#elif(FREQ_SYS == 60000000)
     i = t * 15;
 #elif(FREQ_SYS == 48000000)
     i = t * 12;
@@ -344,6 +340,8 @@ void mDelayuS(uint16_t t)
     i = t >> 1;
 #elif(FREQ_SYS == 1000000)
     i = t >> 2;
+#else
+    i = t << 1;
 #endif
     do
     {
@@ -354,9 +352,9 @@ void mDelayuS(uint16_t t)
 /*********************************************************************
  * @fn      mDelaymS
  *
- * @brief   mS ï¿½ï¿½Ê±
+ * @brief   mS ÑÓÊ±
  *
- * @param   t       - Ê±ï¿½ï¿½ï¿½ï¿½ï¿½
+ * @param   t       - Ê±¼ä²ÎÊý
  *
  * @return  none
  */
@@ -378,17 +376,17 @@ int _write(int fd, char *buf, int size)
     for(i = 0; i < size; i++)
     {
 #if DEBUG == Debug_UART0
-        while(R8_UART0_TFC == UART_FIFO_SIZE);                  /* ï¿½È´ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½ï¿½ */
-        R8_UART0_THR = *buf++; /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+        while(R8_UART0_TFC == UART_FIFO_SIZE);                  /* µÈ´ýÊý¾Ý·¢ËÍ */
+        R8_UART0_THR = *buf++; /* ·¢ËÍÊý¾Ý */
 #elif DEBUG == Debug_UART1
-        while(R8_UART1_TFC == UART_FIFO_SIZE);                  /* ï¿½È´ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½ï¿½ */
-        R8_UART1_THR = *buf++; /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+        while(R8_UART1_TFC == UART_FIFO_SIZE);                  /* µÈ´ýÊý¾Ý·¢ËÍ */
+        R8_UART1_THR = *buf++; /* ·¢ËÍÊý¾Ý */
 #elif DEBUG == Debug_UART2
-        while(R8_UART2_TFC == UART_FIFO_SIZE);                  /* ï¿½È´ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½ï¿½ */
-        R8_UART2_THR = *buf++; /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+        while(R8_UART2_TFC == UART_FIFO_SIZE);                  /* µÈ´ýÊý¾Ý·¢ËÍ */
+        R8_UART2_THR = *buf++; /* ·¢ËÍÊý¾Ý */
 #elif DEBUG == Debug_UART3       
-        while(R8_UART3_TFC == UART_FIFO_SIZE);                  /* ï¿½È´ï¿½ï¿½ï¿½ï¿½Ý·ï¿½ï¿½ï¿½ */
-        R8_UART3_THR = *buf++; /* ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ */
+        while(R8_UART3_TFC == UART_FIFO_SIZE);                  /* µÈ´ýÊý¾Ý·¢ËÍ */
+        R8_UART3_THR = *buf++; /* ·¢ËÍÊý¾Ý */
 #endif
     }
     return size;

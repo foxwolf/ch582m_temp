@@ -1,19 +1,22 @@
 /********************************** (C) COPYRIGHT ******************************
  * File Name         : CH58xBLE_ROM.H
  * Author            : WCH
- * Version           : V1.30
- * Date              : 2022/03/18
+ * Version           : V1.80
+ * Date              : 2023/02/13
  * Description       : head file
  *                    Address Space
  *                       CODE:   00010000H - 0003FFFFH   192K
  *                           :   00040000H - 0006FFFFH   192K
+ *                           :   0004E000H - 0006FFFFH   136K
  *                       DATA:   20000000H - 20001FFFH     8K
  *
  * note:
- *  CH58xBLE_ROM.hex   #define LIB_FLASH_BASE_ADDRESSS   0x00010000(default)
- *  CH58xBLE_ROMx.hex  #define LIB_FLASH_BASE_ADDRESSS   0x00040000
+ *  CH58xBLE_ROM.hex       #define LIB_FLASH_BASE_ADDRESSS   0x00010000(default)
+ *  CH58xBLE_ROMx.hex      #define LIB_FLASH_BASE_ADDRESSS   0x00040000
+ *  CH58xBLE_ROM_MESH.hex  #define LIB_FLASH_BASE_ADDRESSS   0x0004E000
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
  *******************************************************************************/
+
 
 /******************************************************************************/
 #ifndef __CH58xBLE_ROM_H
@@ -26,88 +29,93 @@ extern "C"
 #include  "stdint.h"
 
 #ifndef int8
-typedef signed char             int8;
+typedef int8_t                  int8;
 #endif
 #ifndef int16
-typedef short                   int16;
+typedef int16_t                 int16;
 #endif
 #ifndef BOOL
-typedef unsigned char           BOOL;
+typedef uint8_t                 BOOL;
 #endif
 #ifndef s8
-typedef signed char             s8;
+typedef int8_t                  s8;
 #endif
 #ifndef s16
-typedef signed short            s16;
+typedef int16_t                 s16;
 #endif
 #ifndef s32
-typedef signed long             s32;
+typedef int32_t                 s32;
 #endif
 #ifndef u8
-typedef unsigned char           u8;
+typedef uint8_t                 u8;
 #endif
 #ifndef u16
-typedef unsigned short          u16;
+typedef uint16_t                u16;
 #endif
 #ifndef u32
-typedef unsigned long           u32;
+typedef uint32_t                u32;
 #endif
 #ifndef u64
-typedef unsigned long long      u64;
+typedef uint64_t                u64;
 #endif
 #ifndef u8C
-typedef const unsigned char     u8C;
+typedef const uint8_t           u8C;
 #endif
 
 #ifndef u8V
-typedef unsigned char volatile  u8V;
+typedef uint8_t volatile        u8V;
 #endif
 #ifndef u32V
-typedef unsigned long volatile  u32V;
+typedef uint32_t volatile       u32V;
 #endif
 
 #ifndef uint8
-typedef unsigned char           uint8;
+typedef uint8_t                 uint8;
 #endif
 #ifndef uint16
-typedef unsigned short          uint16;
+typedef uint16_t                uint16;
 #endif
 #ifndef uint32
-typedef unsigned long           uint32;
+typedef uint32_t                uint32;
 #endif
+
 #ifndef TRUE
   #define TRUE                  1
 #endif
 #ifndef FALSE
   #define FALSE                 0
 #endif
-#ifndef SUCCESS
-#define  SUCCESS                0x00
-#endif
 #ifndef NULL
   #define NULL                  0
 #endif
-#ifndef CONST
-#define CONST                   const
+#ifndef SUCCESS
+#define  SUCCESS                0x00
 #endif
 #ifndef  bStatus_t
-typedef unsigned char                   bStatus_t;
+typedef uint8_t                 bStatus_t;
 #endif
 #ifndef  tmosTaskID
-typedef unsigned char                   tmosTaskID;
+typedef uint8_t                 tmosTaskID;
 #endif
 #ifndef  tmosEvents
-typedef unsigned short                  tmosEvents;
+typedef uint16_t                tmosEvents;
 #endif
 #ifndef  tmosTimer
-typedef unsigned long                   tmosTimer;
+typedef uint32_t                tmosTimer;
 #endif
+#ifndef  tmosSnvId_t
+typedef uint8_t                 tmosSnvId_t;
+#endif
+#ifndef  tmosSnvLen_t
+typedef uint8_t                 tmosSnvLen_t;
+#endif
+
 // Define function type that generate a random seed callback
 typedef uint32_t (*pfnSrandCB)( void );
 // Define function type that switch to idle mode callback
-typedef uint32_t (*pfnSleepCB)( uint32_t );
-// Define function type that run RC 32K clock calibration callback
-typedef void (*pfnLSECalibrationCB)( void );
+typedef uint32_t (*pfnIdleCB)( uint32_t );
+// Define function type that run LSI clock calibration callback
+typedef void (*pfnLSICalibrationCB)( void );
 // Define function type that get temperature callback
 typedef uint16_t (*pfnTempSampleCB)( void );
 // Define function type that connect/advertise event complete callback.
@@ -128,27 +136,29 @@ typedef struct tag_ble_config
 {
     uint32_t MEMAddr;               // library memory start address
     uint16_t MEMLen;                // library memory size
-    uint32_t SNVAddr;               // SNV flash start address,must be data-flash area or NULL(bonding information will not be saved)
-    uint16_t SNVBlock;              // SNV flash block size ( default 512 )
+    uint32_t SNVAddr;               // SNV flash start address( if NULL,bonding information will not be saved )
+    uint16_t SNVBlock;              // SNV flash block size ( default 256 )
     uint8_t SNVNum;                 // SNV flash block number ( default 1 )
     uint8_t BufNumber;              // Maximum number of sent and received packages cached by the controller( default 5 )
                                     // Must be greater than the number of connections.
-    uint16_t BufMaxLen;             // Maximum length (in octets) of the data portion of each HCI data packet,ATT_MTU = BufMaxLen-4,Range[23,ATT_MAX_MTU_SIZE].( default 27 )
+    uint16_t BufMaxLen;             // Maximum length (in octets) of the data portion of each HCI data packet( default 27 )
+                                    // SC enable,must be greater than 69
                                     // ATT_MTU = BufMaxLen-4,Range[23,ATT_MAX_MTU_SIZE]
     uint8_t TxNumEvent;             // Maximum number of TX data in a connection event ( default 1 )
     uint8_t RxNumEvent;             // Maximum number of RX data in a connection event ( default equal to BufNumber )
     uint8_t TxPower;                // Transmit power level( default LL_TX_POWEER_0_DBM(0dBm) )
-    uint8_t WakeUpTime;             // Wake up time value in one RTC count ( default 45 )
-    uint8_t SelRTCClock;            // RTC clock select LSE,LSI(32768Hz or 32000Hz)( default:0 LSE,1: LSI(32000Hz),2:LSI(32768Hz))
-                                    // bit7: select connect timer.0:RTC timer 1:system clock timer(must disable sleep)
+    uint8_t WakeUpTime;             // Wake up time value in one system count
+    uint8_t SelRTCClock;            // system clock select
+                                    // bit0-1 00: LSE(32768Hz) 01:LSI(32000Hz) 10:LSI(32768Hz)
+                                    // bit7:  1: ble timer(HSE)(must disable sleep)
     uint8_t ConnectNumber;          // Connect number,lower two bits are peripheral number,followed by central number
-    uint8_t WindowWidening;         // Wait rf start window
-    uint8_t WaitWindow;             // Wait event arrive window
-    uint8_t MacAddr[6];             // MAC address,little-endian( factory default )
+    uint8_t WindowWidening;         // Wait rf start window(us)
+    uint8_t WaitWindow;             // Wait event arrive window in one system clock
+    uint8_t MacAddr[6];             // MAC address,little-endian
     pfnSrandCB srandCB;             // Register a program that generate a random seed
-    pfnSleepCB sleepCB;             // Register a program that set idle mode
+    pfnIdleCB sleepCB;              // Register a program that set idle
     pfnTempSampleCB tsCB;           // Register a program that read the current temperature,determine whether calibration is need
-    pfnLSECalibrationCB rcCB;       // Register a program that RC32K clock calibration
+    pfnLSICalibrationCB rcCB;       // Register a program that LSI clock calibration
     pfnLibStatusErrorCB staCB;      // Register a program that library status callback
     pfnFlashReadCB readFlashCB;     // Register a program that read flash
     pfnFlashWriteCB writeFlashCB;   // Register a program that write flash
@@ -179,10 +189,12 @@ typedef struct
 /*********************************************************************
  * GLOBAL MACROS
  */
-#define VER_FILE  "CH58x_BLE_LIB_V1.3"
+#define VER_FILE  "CH58x_BLE_LIB_V1.8"
 extern const uint8_t VER_LIB[];  // LIB version
 #define SYSTEM_TIME_MICROSEN            625   // unit of process event timer is 625us
 #define MS1_TO_SYSTEM_TIME(x)  ((x)*1000/SYSTEM_TIME_MICROSEN)   // transform unit in ms to unit in 625us ( attentional bias )
+#define TMOS_TIME_VALID                (30*1000*1000)  // the maximum task time = RTC MAX clock - TMOS_TIME_VALID
+
 /* takes a byte out of a uint32_t : var - uint32_t,  ByteNum - byte to take out (0 - 3) */
 #define BREAK_UINT32( var, ByteNum ) (uint8_t)((uint32_t)(((var) >>((ByteNum) * 8)) & 0x00FF))
 #define HI_UINT16(a) (((a) >> 8) & 0xFF)
@@ -219,7 +231,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define ABS(n)     (((n) < 0) ? -(n) : (n))
 #endif
 
-/* TxPower define(Accuracy:¡À1dBm) */
+/* TxPower define(Accuracy:¡À2dBm) */
 #define LL_TX_POWEER_MINUS_16_DBM       0x01
 #define LL_TX_POWEER_MINUS_12_DBM       0x02
 #define LL_TX_POWEER_MINUS_8_DBM        0x04
@@ -249,6 +261,8 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define B_RANDOM_NUM_SIZE               8
 //! Default key length
 #define KEYLEN                          16
+#define PUBLIC_KEY_LEN                  64
+
 //! Maximum Advertising Packet Length
 #define B_MAX_ADV_LEN                   31     // maximum legacy advertising packet length
 #define B_MAX_ADV_EXT_LEN               460    // maximum extended advertising packet length
@@ -664,8 +678,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define gattCharacterType( t )          ( ATT_CompareUUID( characterUUID, ATT_BT_UUID_SIZE, (t).uuid, (t).len ) )
 #define gattIncludeType( t )            ( ATT_CompareUUID( includeUUID, ATT_BT_UUID_SIZE, (t).uuid, (t).len ) )
 #define gattServiceType( t )            ( gattPrimaryServiceType( (t) ) || gattSecondaryServiceType( (t) ) )
-#define GATT_CONNECT_NUM                (3)
-#define GATT_MAX_NUM_CONN               (GATT_CONNECT_NUM+1)
+#define GATT_MAX_NUM_CONN               (4)
 
 // GATT Client Characteristic Configuration Bit Fields
 #define GATT_CLIENT_CFG_NOTIFY          0x0001 //!< The Characteristic Value shall be notified
@@ -707,7 +720,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAP_BOND_COMPLETE_EVENT                 0x0E //!< Sent when the bonding process is complete. This event is sent as an tmos message defined as gapBondCompleteEvent_t.
 #define GAP_PAIRING_REQ_EVENT                   0x0F //!< Sent when an unexpected Pairing Request is received. This event is sent as an tmos message defined as gapPairingReqEvent_t.
 #define GAP_DIRECT_DEVICE_INFO_EVENT            0x10 //!< Sent when a direct Advertising Data is received. This event is sent as an tmos message defined as gapDirectDeviceInfoEvent_t.
-#define GAP_PHY_UPDATE_EVENT                    0x11 //!< Sent when a PHY Update Event is received. This event is sent as an tmos message defined as gapPhyUpdateEvent_t.
+#define GAP_PHY_UPDATE_EVENT                    0x11 //!< Sent when a PHY Update Event is received. This event is sent as an tmos message defined as gapLinkUpdateEvent_t.
 #define GAP_EXT_ADV_DEVICE_INFO_EVENT           0x12 //!< Sent when a Extended Advertising Data is received. This event is sent as an tmos message defined as gapExtAdvDeviceInfoEvent_t.
 #define GAP_MAKE_PERIODIC_ADV_DONE_EVENT        0x13 //!< Sent when the Set Periodic Advertising enable is complete. This event is sent as an tmos message defined as gapMakePeriodicRspEvent_t.
 #define GAP_END_PERIODIC_ADV_DONE_EVENT         0x14 //!< Sent when the Set Periodic Advertising disable is complete. This event is sent as an tmos message defined as gapEndPeriodicRspEvent_t.
@@ -715,6 +728,10 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAP_PERIODIC_ADV_DEVICE_INFO_EVENT      0x16 //!< Sent when a Periodic Advertising Data is received. This event is sent as an tmos message defined as gapPeriodicAdvDeviceInfoEvent_t.
 #define GAP_SYNC_LOST_EVENT                     0x17 //!< Sent when a Periodic Advertising Sync was lost. This event is sent as an tmos message defined as gapSyncLostEvent_t.
 #define GAP_SCAN_REQUEST_EVENT                  0x19 //!< Sent when a SCAN_REQ PDU or an AUX_SCAN_REQ PDU has been received by the advertiser. This event is sent as an tmos message defined as gapScanReqReseiveEvent_t.
+#define GAP_OOB_NEEDED_EVENT                    0x1A //!< resv
+#define GAP_MAKE_CONNECTIONESS_CTE_DONE_EVENT   0x1B //!< Sent when the Set Connectionless CTE Transmit enable is complete. This event is sent as an tmos message defined as gapMakeConnectionlessCTERspEvent_t.
+#define GAP_END_CONNECTIONESS_CTE_DONE_EVENT    0x1C //!< Sent when the Set Connectionless CTE Transmit disable is complete. This event is sent as an tmos message defined as gapEndConnectionlessCTERspEvent_t.
+#define GAP_PERI_ADV_SYNC_TRAN_RECEIVED_EVENT   0x1D //!< Sent when the periodic advertising sync transfer received. This event is sent as an tmos message defined as gapPeriTranReceivec_t.
 
 // GAP_PROFILE_ROLE_DEFINES GAP Profile Roles
 #define GAP_PROFILE_BROADCASTER                 0x01 //!< A device that sends advertising events only.
@@ -805,16 +822,15 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define TGAP_ADV_SECONDARY_MAX_SKIP             28  //!< Maximum advertising events the Controller can skip before sending the AUX_ADV_IND packets on the secondary advertising channel. Default 0.
 #define TGAP_ADV_ADVERTISING_SID                29  //!< Value of the Advertising SID subfield in the ADI field of the PDU Range:0-15. Default 0.
 #define TGAP_ADV_SCAN_REQ_NOTIFY                30  //!< Scan request notifications enabled.Default 0-disabled.
-#define TGAP_ADV_ADVERTISING_DURATION           31  //!< Advertising duration Range: 0x0001 ¨C 0xFFFF Time = N * 10ms. Default 0-No advertising duration.
-#define TGAP_ADV_MAX_EVENTS                     32  //!< indicates the maximum number of extended advertising events.Range: 0x00 ¨C 0xFF. Default 0(No maximum number of advertising events).
+#define TGAP_ADV_ADVERTISING_DURATION           31  //!< Advertising duration Range: 0x0001 - 0xFFFF Time = N * 10ms. Default 0-No advertising duration.
+#define TGAP_ADV_MAX_EVENTS                     32  //!< indicates the maximum number of extended advertising events.Range: 0x00 - 0xFF. Default 0(No maximum number of advertising events).
 
 // when in General Discovery process
 #define TGAP_DISC_SCAN_PHY                      33  //!< LE 1M/LE Coded. Default GAP_PHY_BIT_LE_1M.
 #define TGAP_DISC_SCAN_CODED_INT                34  //!< Scan interval used during Link Layer coded Scanning state, when in General Discovery process (n * 0.625 mSec)
 #define TGAP_DISC_SCAN_CODED_WIND               35  //!< Scan window used during Link Layer coded Scanning state, when in General Discovery process (n * 0.625 mSec)
-#define TGAP_DISC_SCAN_DURATION                 36  //!< Scan duration Range: 0x0001 ¨C 0xFFFF Time = N * 10 ms. Default 0-Scan continuously until explicitly disable.
-#define TGAP_DISC_SCAN_PERIOD                   37  //!< Time interval from when the Controller started its last Scan_Duration until it begins the subsequent Scan_Duration.
-                                                    //!< Default 0 Periodic scanning disabled.
+#define TGAP_DISC_SCAN_DURATION                 36  //!< Scan duration Range: 0x0001 - 0xFFFF Time = N * 10 ms. Default 0-Scan continuously until explicitly disable.
+#define TGAP_DISC_SCAN_PERIOD                   37  //!< resv.
 
 // when in Connection Establishment process(2M PHY)
 #define TGAP_CONN_EST_INT_PHY                   38  //!< LE 1M/LE Coded. Default GAP_PHY_BIT_LE_1M.
@@ -843,9 +859,15 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define TGAP_PERIODIC_ADV_PROPERTIES            57  //!< Include TxPower in the periodic advertising PDU.
 
 #define TGAP_SCAN_MAX_LENGTH                    58  //!< Extended scan maximum data length.Default 460
-#define TGAP_AFH_CHANNEL_MDOE                   59  //!< whether t he Controller¡¯s channel assessment scheme is enabled or disabled.Default disabled.
+#define TGAP_AFH_CHANNEL_MDOE                   59  //!< whether t he Controller's channel assessment scheme is enabled or disabled.Default disabled.
 
-#define TGAP_PARAMID_MAX                        60  //!< ID MAX-valid Parameter ID
+// Constant Tone Extension Transmit
+#define TGAP_CTE_TYPE                           60  //!< The type of Constant Tone Extension.Default GAP_CTE_TYPE_AOA.
+#define TGAP_CTE_LENGTH                         61  //!< Constant Tone Extension length in 8Âµs units.Default 20.Range[2,20]
+#define TGAP_CTE_COUNT                          62  //!< resv
+#define TGAP_LENGTH_OF_SWITCHING_PATTERN        63  //!< The number of Antenna IDs in the pattern,only used when transmitting an AoD Constant Tone Extension.Default 0.
+
+#define TGAP_PARAMID_MAX                        64  //!< ID MAX-valid Parameter ID
 
 // GAP_DEVDISC_MODE_DEFINES GAP Device Discovery Modes
 #define DEVDISC_MODE_NONDISCOVERABLE            0x00  //!< No discoverable setting
@@ -887,9 +909,19 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAP_PHY_BIT_ALL                         (GAP_PHY_BIT_LE_1M|GAP_PHY_BIT_LE_2M|GAP_PHY_BIT_LE_CODED)
 #define GAP_PHY_BIT_LE_CODED_S2                 (1<<3)
 
+// PHY_OPTIONS preferred coding when transmitting on the LE Coded PHY
+#define GAP_PHY_OPTIONS_TYPE
+#define GAP_PHY_OPTIONS_NOPRE                   0x00 // 0:no preferred
+#define GAP_PHY_OPTIONS_S2                      0x01
+#define GAP_PHY_OPTIONS_S8                      0x02
+
 // GAP_ADVERTISEMENT_TYPE_DEFINES GAP Periodic Advertising Properties
 #define GAP_PERI_PROPERTIES_INCLUDE_TXPOWER     (1<<6)
 
+// GAP_ADVERTISEMENT_TYPE_DEFINES GAP Connectionless CTE Transmit CTE type
+#define GAP_CTE_TYPE_AOA                        0x00  //!< AoA Constant Tone Extension
+#define GAP_CTE_TYPE_AOD_1US                    0x01  //!< AoD Constant Tone Extension with 1us slots
+#define GAP_CTE_TYPE_AOD_2US                    0x02  //!< AoD Constant Tone Extension with 2us slots
 
 // GAP Advertising Report Event Types
 #define GAP_ADVERTISEMENT_REPORT_TYPE_DEFINES
@@ -1045,6 +1077,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAPROLE_PERIODIC_ADVERT_DATA            0x315  //!< Periodic advertisement Data. Read/Write. Max size is B_MAX_ADV_PERIODIC_LEN. Default to all 0.
 #define GAPROLE_PERIODIC_ADVERT_ENABLED         0x316  //!< bit0:Enable/Disable Periodic Advertising. Read/Write. Size is uint8_t. Default is FALSE=Disable.
                                                        //!< bit1:Include the ADI field in AUX_SYNC_IND PDUs
+#define GAPROLE_CTE_CONNECTIONLESS_ENABLED      0x317  //!< Enable/Disable Connectionless CTE Transmit. Read/Write. Size is uint8_t. Default is FALSE=Disable.
 
 /************************************GAPBOND***********************************/
 // GAPBOND_PROFILE_PARAMETERS GAP Bond Manager Parameters
@@ -1054,7 +1087,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAPBOND_PERI_OOB_ENABLED                0x403  //!< OOB data available for pairing algorithm. Read/Write. Size is uint8_t. Default is 0(disabled).
 #define GAPBOND_PERI_OOB_DATA                   0x404  //!< OOB Data. Read/Write. size uint8_t[16]. Default is all 0's.
 #define GAPBOND_PERI_BONDING_ENABLED            0x405  //!< Request Bonding during the pairing process if enabled.  Read/Write. Size is uint8_t. Default is 0(disabled).
-#define GAPBOND_PERI_KEY_DIST_LIST              0x406  //!< The key distribution list for bonding.  size is uint8_t.  @ref GAPBOND_KEY_DIST_DEFINES. Default is sEncKey, sIdKey, mIdKey, mSign enabled.
+#define GAPBOND_PERI_KEY_DIST_LIST              0x406  //!< The key distribution list for bonding.  size is uint8_t.  @ref GAPBOND_KEY_DIST_DEFINES. Default is 0x77.
 #define GAPBOND_PERI_DEFAULT_PASSCODE           0x407  //!< The default passcode for MITM protection. size is uint32_t. Range is 0 - 999,999. Default is 0.
 #define GAPBOND_CENT_PAIRING_MODE               0x408  //!< Pairing Mode: @ref  GAPBOND_PAIRING_MODE_DEFINES. Read/Write. Size is uint8_t. Default is GAPBOND_PAIRING_MODE_WAIT_FOR_REQ.
 #define GAPBOND_CENT_MITM_PROTECTION            0x409  //!< Man-In-The-Middle (MITM) basically turns on Passkey protection in the pairing algorithm. Read/Write. Size is uint8_t. Default is 0(disabled).
@@ -1062,7 +1095,7 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAPBOND_CENT_OOB_ENABLED                0x40B  //!< OOB data available for pairing algorithm. Read/Write. Size is uint8_t. Default is 0(disabled).
 #define GAPBOND_CENT_OOB_DATA                   0x40C  //!< OOB Data. Read/Write. size uint8_t[16]. Default is all 0's.
 #define GAPBOND_CENT_BONDING_ENABLED            0x40D  //!< Request Bonding during the pairing process if enabled.  Read/Write. Size is uint8_t. Default is 0(disabled).
-#define GAPBOND_CENT_KEY_DIST_LIST              0x40E  //!< The key distribution list for bonding.  size is uint8_t.  @ref GAPBOND_KEY_DIST_DEFINES. Default is sEncKey, sIdKey, mIdKey, mSign enabled.
+#define GAPBOND_CENT_KEY_DIST_LIST              0x40E  //!< The key distribution list for bonding.  size is uint8_t.  @ref GAPBOND_KEY_DIST_DEFINES. Default is 0x77.
 #define GAPBOND_CENT_DEFAULT_PASSCODE           0x40F  //!< The default passcode for MITM protection. size is uint32_t. Range is 0 - 999,999. Default is 0.
 #define GAPBOND_ERASE_ALLBONDS                  0x410  //!< Erase all of the bonded devices. Write Only. No Size.
 #define GAPBOND_AUTO_FAIL_PAIRING               0x411  //!< TEST MODE (DO NOT USE) to automatically send a Pairing Fail when a Pairing Request is received. Read/Write. size is uint8_t. Default is 0 (disabled).
@@ -1080,6 +1113,9 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAPBOND_ENABLE_ALLBONDS                 0x41D  //!< Ensable all of the bonded devices. Write Only. No Size.
 #define GAPBOND_ERASE_AUTO                      0x41E  //!< Auto erase all of the bonded devices when the maximum number is reached.Size is uint8_t. Default is 1(enabled).
 #define GAPBOND_AUTO_SYNC_RL                    0x41F  //!< Clears the Resolving List adds to it each unique address stored by bonds in NV. Read/Write. Size is uint8_t. Default is FALSE.
+#define GAPBOND_SET_ENC_PARAMS                  0x420  //!< Set bonding parameters.size is bondEncParams_t.
+#define GAPBOND_PERI_SC_PROTECTION              0x421  //!< Set peripheral sc enable. Default is FALSE.
+#define GAPBOND_CENT_SC_PROTECTION              0x422  //!< Set central sc enable. Default is FALSE.
 
 // GAPBOND_PAIRING_MODE_DEFINES GAP Bond Manager Pairing Modes
 #define GAPBOND_PAIRING_MODE_NO_PAIRING         0x00  //!< Pairing is not allowed
@@ -1119,6 +1155,10 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define SMP_PAIRING_FAILED_CMD_NOT_SUPPORTED    0x07 //!< The SMP command received is not supported on this device.
 #define SMP_PAIRING_FAILED_UNSPECIFIED          0x08 //!< Pairing failed due to an unspecified reason
 #define SMP_PAIRING_FAILED_REPEATED_ATTEMPTS    0x09 //!< Pairing or authentication procedure is disallowed because too little time has elapsed since the last pairing request or security request.
+#define SMP_PAIRING_FAILED_INVALID_PARAMERERS   0x0A //!< The Invalid Parameters error code indicates that the command length is invalid or that a parameter is outside of the specified range.
+#define SMP_PAIRING_FAILED_DHKEY_CHECK_FAILED   0x0B //!< Indicates to the remote device that the DHKey Check value received doesn¡¯t match the one calculated by the local device.
+#define SMP_PAIRING_FAILED_NUMERIC_COMPARISON   0x0C //!< Indicates that the confirm values in the numeric comparison protocol do not match.
+#define SMP_PAIRING_FAILED_KEY_REJECTED         0x0F //!< Indicates that the device chose not to accept a distributed key.
 
 // GAPBOND_BONDING_FAILURE_DEFINES Bonding Failure Actions
 #define GAPBOND_FAIL_NO_ACTION                  0x00 //!< Take no action upon unsuccessful bonding
@@ -1126,6 +1166,18 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAPBOND_FAIL_TERMINATE_LINK             0x02 //!< Terminate link upon unsuccessful bonding
 #define GAPBOND_FAIL_TERMINATE_ERASE_BONDS      0x03 //!< Terminate link and erase all existing bonds on device upon unsuccessful bonding
 
+// Device NV Items
+#define BLE_NVID_IRK                            0x02  //!< The Device's IRK
+#define BLE_NVID_CSRK                           0x03  //!< The Device's CSRK
+#define BLE_NVID_SIGNCOUNTER                    0x04  //!< The Device's Sign Counter
+
+//!< RF Mode BOND NV IDs
+#define BLE_NVID_BOND_RF_START                  0x10  //!< Start of the RF BOND NV IDs
+
+// Bonding NV Items - Range 0x20 - 0x6F
+#define BLE_NVID_GAP_BOND_START                 0x20  //!< Start of the GAP Bond Manager's NV IDs
+
+// GAP BOND Items
 #define GAP_BOND_REC_ID_OFFSET                  0 //!< NV ID for the main bonding record
 #define GAP_BOND_LOCAL_LTK_OFFSET               1 //!< NV ID for the bonding record's local LTK information
 #define GAP_BOND_DEV_LTK_OFFSET                 2 //!< NV ID for the bonding records' device LTK information
@@ -1133,15 +1185,6 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define GAP_BOND_DEV_CSRK_OFFSET                4 //!< NV ID for the bonding records' device CSRK
 #define GAP_BOND_DEV_SIGN_COUNTER_OFFSET        5 //!< NV ID for the bonding records' device Sign Counter
 #define GAP_BOND_REC_IDS                        6
-
-// Bonding NV Items -   START  0x20   
-#define BLE_NVID_GAP_BOND_START                 0x20  //!< Start of the GAP Bond Manager's NV IDs
-
-// GATT Configuration NV Items - START  0x70 
-#define BLE_NVID_GATT_CFG_START                 0x70  //!< Start of the GATT Configuration NV IDs
-
-// RF BOND Configuration 
-#define BLE_NVID_BOND_RF_START                  0x60  //!< Start of the RF BOND NV IDs
 
 // Macros to calculate the index/offset in to NV space
 #define calcNvID(Idx, offset)           (((((Idx) * GAP_BOND_REC_IDS) + (offset))) + BLE_NVID_GAP_BOND_START)
@@ -1151,8 +1194,14 @@ extern const uint8_t VER_LIB[];  // LIB version
 #define devIRKNvID(bondIdx)             (calcNvID((bondIdx), GAP_BOND_DEV_IRK_OFFSET))
 #define devCSRKNvID(bondIdx)            (calcNvID((bondIdx), GAP_BOND_DEV_CSRK_OFFSET))
 #define devSignCounterNvID(bondIdx)     (calcNvID((bondIdx), GAP_BOND_DEV_SIGN_COUNTER_OFFSET))
+
+// GATT Configuration NV Items -Range 0x70 - 0x7F
+#define BLE_NVID_GATT_CFG_START                 0x70  //!< Start of the GATT Configuration NV IDs
+
 // Macros to calculate the GATT index/offset in to NV space
 #define gattCfgNvID(Idx)                ((Idx) + BLE_NVID_GATT_CFG_START)
+
+#define BLE_NVID_MAX_VAL                        0x7F
 
 // Structure of NV data for the connected device's encryption information
 typedef struct
@@ -1199,13 +1248,21 @@ typedef struct
 
 typedef struct
 {
+    uint8_t connRole;          // GAP Profile Roles @GAP_PROFILE_ROLE_DEFINES
+    uint8_t addrType;          // Address type of connected device
+    uint8_t addr[B_ADDR_LEN];  // Other Device's address
+    encParams_t encParams;
+} bondEncParams_t;
+
+typedef struct
+{
     uint8_t taskID;            // Application that controls the link
     uint16_t connectionHandle; // Controller connection handle
     uint8_t stateFlags;        // LINK_CONNECTED, LINK_AUTHENTICATED...
     uint8_t addrType;          // Address type of connected device
     uint8_t addr[B_ADDR_LEN];  // Other Device's address
-    uint8_t connRole;          // Connection formed as Master or Slave
-    uint16_t connInterval;     // The connection's interval (n * 1.23 ms)
+    uint8_t connRole;          // Connection formed as central or peripheral
+    uint16_t connInterval;     // The connection's interval (n * 1.25ms)
     uint16_t connLatency;
     uint16_t connTimeout;
     uint16_t MTU;              // The connection's MTU size
@@ -1215,6 +1272,7 @@ typedef struct
     void *pPairingParams;
     void *pAuthLink;
 } linkDBItem_t;
+
 // function pointer used to register for a status callback
 typedef void (*pfnLinkDBCB_t)( uint16_t connectionHandle, uint8_t changeType );
 // function pointer used to perform specialized link database searches
@@ -1405,8 +1463,8 @@ typedef struct
     uint16_t handle;  //!< Handle of the attribute to be written (must be first field)
     uint16_t len;     //!< Length of value
     uint8_t *pValue;  //!< Value of the attribute to be written (0 to ATT_MTU_SIZE-3)
-    uint8_t sig;     //!< Authentication Signature status (not included (0), valid (1), invalid (2))
-    uint8_t cmd;     //!< Command Flag
+    uint8_t sig;      //!< Authentication Signature status (not included (0), valid (1), invalid (2))
+    uint8_t cmd;      //!< Command Flag
 } attWriteReq_t;
 
 /**
@@ -1417,7 +1475,7 @@ typedef struct
     uint16_t handle;  //!< Handle of the attribute to be written (must be first field)
     uint16_t offset;  //!< Offset of the first octet to be written
     uint16_t len;     //!< Length of value
-    uint8_t *pValue; //!< Part of the value of the attribute to be written (0 to ATT_MTU_SIZE-5) - must be allocated
+    uint8_t *pValue;  //!< Part of the value of the attribute to be written (0 to ATT_MTU_SIZE-5) - must be allocated
 } attPrepareWriteReq_t;
 
 /**
@@ -1437,7 +1495,7 @@ typedef struct
 typedef struct
 {
     uint8_t flags;  //!< 0x00 - cancel all prepared writes.
-                  //!< 0x01 - immediately write all pending prepared values.
+                    //!< 0x01 - immediately write all pending prepared values.
 } attExecuteWriteReq_t;
 
 /**
@@ -1761,6 +1819,19 @@ typedef struct
 
 /*************************************gap**************************************/
 /**
+ * Connection parameters for the peripheral device.  These numbers are used
+ * to compare against connection events and request connection parameter
+ * updates with the central.
+ */
+typedef struct
+{
+  uint16_t intervalMin;               //!< Minimum value for the connection event (interval. 0x0006 - 0x0C80 * 1.25ms)
+  uint16_t intervalMax;               //!< Maximum value for the connection event (interval. 0x0006 - 0x0C80 * 1.25ms)
+  uint16_t latency;                   //!< Number of LL latency connection events (0x0000 - 0x03e8)
+  uint16_t timeout;                   //!< Connection Timeout (0x000A - 0x0C80 * 10ms)
+} gapPeriConnectParams_t;
+
+/**
  * GAP event header format.
  */
 typedef struct
@@ -1849,7 +1920,7 @@ typedef struct
     uint8_t primaryPHY;                //!< Advertiser PHY on the primary advertising channel
     uint8_t secondaryPHY;              //!< Advertiser PHY on the secondary advertising channel
     uint8_t advertisingSID;            //!< Value of the Advertising SID subfield in the ADI field of the PDU
-    uint8_t txPower;                   //!< Advertisement or SCAN_RSP power
+    int8_t txPower;                    //!< Advertisement or SCAN_RSP power
     int8_t rssi;                       //!< Advertisement or SCAN_RSP RSSI
     uint16_t periodicAdvInterval;      //!< the interval of periodic advertising
     uint8_t directAddressType;         //!< public or random address type
@@ -1990,6 +2061,25 @@ typedef struct
     uint8_t scannerAddr[B_ADDR_LEN];//!< the address of scanner device
 } gapScanReqReseiveEvent_t;
 
+/**
+ * GAP_CONNECTIONESS_CTE_DONE_EVENT message format.  This message is sent to the
+ * app when the Connectionless CTE Transmit config is complete.
+ */
+typedef struct
+{
+    tmos_event_hdr_t hdr; //!< GAP_MSG_EVENT and status
+    uint8_t opcode;          //!< GAP_CONNECTIONESS_CTE_DONE_EVENT
+} gapMakeConnectionlessCTERspEvent_t;
+
+/**
+ * GAP_END_PERIODIC_ADV_DONE_EVENT message format.  This message is sent to the
+ * app when the Periodic Advertising disable is complete.
+ */
+typedef struct
+{
+    tmos_event_hdr_t hdr; //!< GAP_MSG_EVENT and status
+    uint8_t opcode;          //!< GAP_END_CONNECTIONESS_CTE_DONE_EVENT
+} gapEndConnectionlessCTERspEvent_t;
 
 /**
  * GAP_ADV_DATA_UPDATE_DONE_EVENT message format.  This message is sent to the
@@ -2096,6 +2186,25 @@ typedef void (*pfnPairStateCB_t)( uint16_t connectionHandle,              //!< C
     uint8_t status                         //!< Pairing status
     );
 
+typedef struct
+{
+    tmos_event_hdr_t hdr;           //!< GAP_MSG_EVENT and status
+    uint8_t opcode;                 //!< GAP_O0B_NEEDED_EVENT
+    uint8_t deviceAddr[B_ADDR_LEN]; //!< address of device to pair with, and could be either public or random.
+    uint16_t connectionHandle;      //!< Connection handle
+    uint8_t r_local[16];
+    uint8_t c_local[16];
+} gapOobNeededEvent_t;
+
+/**
+ * OOB Callback Function
+ */
+typedef void (*pfnOobCB_t)( uint8_t *deviceAddr, //!< address of device to pair with, and could be either public or random.
+    uint16_t connectionHandle,      //!< Connection handle
+    uint8_t* r_local,               //!< local rand
+    uint8_t *c_local                //!< local confirm
+    );
+
 /**
  * Callback Registration Structure
  */
@@ -2103,7 +2212,38 @@ typedef struct
 {
     pfnPasscodeCB_t passcodeCB;     //!< Passcode callback
     pfnPairStateCB_t pairStateCB;   //!< Pairing state callback
+    pfnOobCB_t  oobCB;              //!< oob callback
 } gapBondCBs_t;
+
+typedef int (*pfnEcc_key_t)( uint8_t *pub, uint8_t *priv);
+
+typedef int (*pfnEcc_dhkey_t)( uint8_t *peer_pub_key_x, uint8_t *peer_pub_key_y,
+    uint8_t *our_priv_key, uint8_t *out_dhkey );
+
+typedef int (*pfnEcc_alg_f4_t)( uint8_t *u, uint8_t *v, uint8_t *x, uint8_t z,
+    uint8_t *out_enc_data );
+
+typedef int (*pfnEcc_alg_g2_t)( uint8_t *u, uint8_t *v, uint8_t *x, uint8_t *y,
+    uint32_t *passkey );
+
+typedef int (*pfnEcc_alg_f5_t)( uint8_t *w, uint8_t *n1, uint8_t *n2,
+    uint8_t a1t, uint8_t *a1, uint8_t a2t, uint8_t *a2, uint8_t *mackey, uint8_t *ltk );
+
+typedef int (*pfnEcc_alg_f6_t)( uint8_t *w, uint8_t *n1, uint8_t *n2, uint8_t *r,
+    uint8_t *iocap, uint8_t a1t, uint8_t *a1, uint8_t a2t, uint8_t *a2, uint8_t *check );
+
+/**
+ * Callback Registration Structure
+ */
+typedef struct
+{
+    pfnEcc_key_t gen_key_pair;
+    pfnEcc_dhkey_t gen_dhkey;
+    pfnEcc_alg_f4_t alg_f4; //!< LE Secure Connections confirm value generation function f4
+    pfnEcc_alg_g2_t alg_g2; //!< LE Secure Connections numeric comparison value generation function g2
+    pfnEcc_alg_f5_t alg_f5; //!< LE Secure Connect ions key generation function  f5
+    pfnEcc_alg_f6_t alg_f6; //!< LE Secure  Connections check value generation function  f6
+} gapEccCBs_t;
 
 /**
  * gapRole_States_t defined
@@ -2130,10 +2270,19 @@ typedef unsigned long gapRole_States_t;
 #define GAPROLE_PERIODIC_WAIT               (2<<4)  //!< Periodic advertising is started but disable
 #define GAPROLE_PERIODIC_ERROR              (3<<4)  //!< Periodic advertising error occurred
 
-// gapRole_States_t @ 16b'[23-8]- Reserved for future use
+// gapRole_States_t @ 4b'[11-8]-Connectionless CTE Transmit states
+// Connectionless CTE Transmit Enable,only effective when Periodic advertising valid
+#define GAPROLE_STATE_CTE_MASK              (0xF00) //!< gapRole_States_t Connectionless CTE defined
+#define GAPROLE_STATE_CTE_SHIFT             (8)     //!< Connectionless CTE Transmit states shift
+#define GAPROLE_CONNECTIONLESS_CTE_INVALID  (0<<8)  //!< Connectionless CTE Transmit Waiting to be started
+#define GAPROLE_CONNECTIONLESS_CTE_ENABLE   (1<<8)  //!< Connectionless CTE Transmit Enable
+#define GAPROLE_CONNECTIONLESS_CTE_WAIT     (2<<8)  //!< Connectionless CTE Transmit is started but disable
+#define GAPROLE_CONNECTIONLESS_CTE_ERROR    (3<<8)  //!< Connectionless CTE Transmit error occurred
+// gapRole_States_t @ 12b'[23-12]- Reserved for future use
 
 // gapRole_States_t @ 8b'[31-24] - indicates which fields change
 #define GAPROLE_PERIODIC_STATE_VALID        (1<<24) //!< indicates periodic advertising states change
+#define GAPROLE_CTE_T_STATE_VALID           (1<<25) //!< indicates Connectionless CTE Transmit states change
 
 /**
  * gapRole Event Structure
@@ -2144,6 +2293,7 @@ typedef union
     gapDeviceInitDoneEvent_t initDone;     //!< GAP initialization done.
     gapDeviceInfoEvent_t deviceInfo;       //!< Discovery device information event structure.
     gapDirectDeviceInfoEvent_t deviceDirectInfo; //!< Discovery direct device information event structure.
+    gapAdvDataUpdateEvent_t dataUpdate; //!< Advertising Data Update is complete.
     gapPeriodicAdvDeviceInfoEvent_t devicePeriodicInfo; //!< Discovery periodic device information event structure.
     gapExtAdvDeviceInfoEvent_t deviceExtAdvInfo; //!< Discovery extend advertising device information event structure.
     gapDevDiscEvent_t discCmpl;            //!< Discovery complete event structure.
@@ -2163,7 +2313,7 @@ typedef union
 typedef struct
 {
     uint8_t eventType; //!< Indicates advertising event type used by the advertiser: @ref GAP_ADVERTISEMENT_REPORT_TYPE_DEFINES
-    uint8_t addrType;         //!< Scan Address Type: @ref GAP_ADDR_TYPE_DEFINES
+    uint8_t addrType;         //!< Scan Address Type:0x00-Public Device Address or Public Identity Address 0x01-Random Device Address or Random (static) Identity Address
     uint8_t addr[B_ADDR_LEN]; //!< Device's Address
     int8_t rssi;
 } gapScanRec_t;
@@ -2174,12 +2324,16 @@ typedef struct
 typedef struct
 {
     uint8_t options;
-    /*  bit0: used to determine whether the Periodic  Advertiser List is used
-     0: Use the Advertising_SID, Advertisier_Address_Type, and Advertiser_Address parameters to determine which advertiser to listen to.
-     1: Use the Periodic Advertiser List to determine which advertiser to listen to.
+    /*
+     bit0: used to determine whether the Periodic  Advertiser List is used
+       0: Use the Advertising_SID, Advertisier_Address_Type, and Advertiser_Address parameters to determine which advertiser to listen to.
+       1: Use the Periodic Advertiser List to determine which advertiser to listen to.
      bit1: whether GAP_PERIODIC_ADV_DEVICE_INFO_EVENT events for this periodic advertising train are initially enabled or disabled.
-     0: Reporting initially enabled
-     1: Reporting initially disabled  */
+       0: Reporting initially enabled
+       1: Reporting initially disabled
+     bit2:
+       0: Duplicate filtering initially disabled
+       1: Duplicate filtering initially enabled */
     uint8_t advertising_SID;  //!< if used, specifies the value that must match the Advertising SID
     uint8_t addrType;         //!< Scan Address Type: @ref GAP_ADDR_TYPE_DEFINES
     uint8_t addr[B_ADDR_LEN]; //!< Device's Address
@@ -2274,6 +2428,7 @@ typedef struct
  * Central Event Callback Function
  */
 typedef void (*pfnGapCentralRoleEventCB_t)( gapRoleEvent_t *pEvent ); //!< Pointer to event structure.
+
 /**
  * HCI Data Length Change Event Callback Function
  */
@@ -2319,6 +2474,11 @@ typedef struct
 #define  LLE_MODE_BASIC               (0)   //!< basic mode, enter idle state after sending or receive
 #define  LLE_MODE_AUTO                (1)   //!< auto mode, auto swtich to the receiving status after sending and the sending status after receiving
 
+// LLE_WHITENING_TYPE
+#define  LLE_WHITENING_ON             (0<<1)
+#define  LLE_WHITENING_OFF            (1<<1)
+
+// LLE_PHY_TYPE
 #define  LLE_MODE_PHY_MODE_MASK       (0x30)
 #define  LLE_MODE_PHY_1M              (0<<4)
 #define  LLE_MODE_PHY_2M              (1<<4)
@@ -2339,25 +2499,26 @@ typedef void (*pfnRFStatusCB_t)( uint8_t sta, uint8_t rsr, uint8_t *rxBuf );
 
 typedef struct tag_rf_config
 {
-    uint8_t LLEMode;                 //!< BIT0   0=LLE_MODE_BASIC, 1=LLE_MODE_AUTO
-                                     //!< BIT4-5 00-1M  01-2M  10-coded(S8) 11-coded(S2)
-                                     //!< BIT6   0=data channel(0-39)
-                                     //!<        1=rf frequency (2400000kHz-2483500kHz)
-                                     //!< BIT7   0=the first byte of the receive buffer is rssi
-                                     //!<        1=the first byte of the receive buffer is package type
-    uint8_t Channel;                 //!< rf channel(0-39)
-    uint32_t Frequency;              //!< rf frequency (2400000kHz-2483500kHz)
-    uint32_t accessAddress;          //!< access address,32bit PHY address
-    uint32_t CRCInit;                //!< crc initial value
-    pfnRFStatusCB_t rfStatusCB;      //!< status call back
-    uint32_t ChannelMap;             //!< indicating  Used and Unused data channels.Every channel is represented with a
-                                     //!< bit positioned as per the data channel index,The LSB represents data channel index 0
+    uint8_t LLEMode;                  //!< BIT0   0=basic, 1=auto def@LLE_MODE_TYPE
+                                      //!< BIT1   0=whitening on, 1=whitening off def@LLE_WHITENING_TYPE
+                                      //!< BIT4-5 00-1M  01-2M  10-coded(S8) 11-coded(S2) def@LLE_PHY_TYPE
+                                      //!< BIT6   0=data channel(0-39)
+                                      //!<        1=rf frequency (2400000kHz-2483500kHz)
+                                      //!< BIT7   0=the first byte of the receive buffer is rssi
+                                      //!<        1=the first byte of the receive buffer is package type
+    uint8_t Channel;                  //!< rf channel(0-39)
+    uint32_t Frequency;               //!< rf frequency (2400000kHz-2483500kHz)
+    uint32_t accessAddress;           //!< access address,32bit PHY address
+    uint32_t CRCInit;                 //!< crc initial value
+    pfnRFStatusCB_t rfStatusCB;       //!< status call back
+    uint32_t ChannelMap;              //!< indicating  Used and Unused data channels.Every channel is represented with a
+                                      //!< bit positioned as per the data channel index,The LSB represents data channel index 0
     uint8_t Resv;
-    uint8_t HeartPeriod;             //!< The heart package interval shall be an integer multiple of 100ms
-    uint8_t HopPeriod;               //!< hop period( T=32n*RTC clock ),default is 8
-    uint8_t HopIndex;                //!< indicate the hopIncrement used in the data channel selection algorithm,default is 17
-    uint8_t RxMaxlen;                //!< Maximum data length received in rf-mode(default 251)
-    uint8_t TxMaxlen;                //!< Maximum data length transmit in rf-mode(default 251)
+    uint8_t HeartPeriod;              //!< The heart package interval shall be an integer multiple of 100ms
+    uint8_t HopPeriod;                //!< hop period( T=32n*RTC clock ),default is 8
+    uint8_t HopIndex;                 //!< indicate the hopIncrement used in the data channel selection algorithm,default is 17
+    uint8_t RxMaxlen;                 //!< Maximum data length received in rf-mode(default 251)
+    uint8_t TxMaxlen;                 //!< Maximum data length transmit in rf-mode(default 251)
 } rfConfig_t;
 
 /* end define@RF-PHY */
@@ -2367,12 +2528,14 @@ typedef struct tag_rf_config
 #define LIB_FLASH_BASE_ADDRESSS   0x00010000
 #endif
 #define LIB_FLASH_MAX_SIZE        0x00030000
+#define LIB_RAM_MAX_SIZE          0x00002000
 
-#define RAM_BASE_ADDRESSS         0x20002800
+#define RAM_BASE_ADDRESSS         0x20000000
 #define UUID_BASE_ADDRESSS        (LIB_FLASH_BASE_ADDRESSS+0x08)
 #define FUNCITON_BASE_ADDRESSS    (LIB_FLASH_BASE_ADDRESSS+0x34)
 
 #define  BLE_LIB_UUID(n) ( UUID_BASE_ADDRESSS+n*2 )
+#define  BLE_LIB_RAM_JT(n) (*(uint32_t*)( RAM_BASE_ADDRESSS+n*4 ))
 #define  BLE_LIB_JT(n) (*(uint32_t*)( FUNCITON_BASE_ADDRESSS+n*4 ))
 #define  VER_LIB  ((  const uint8_t*)      BLE_LIB_JT(0))
 
@@ -2433,7 +2596,7 @@ typedef struct tag_rf_config
  * @param   taskID - task ID of event
  * @param   event - event value
  *
- * @return  0 - success.
+ * @return  0 - SUCCESS.
  */
 #define    tmos_set_event  ((  bStatus_t  (*)  ( tmosTaskID taskID, tmosEvents event ))  BLE_LIB_JT(7))
 
@@ -2443,7 +2606,7 @@ typedef struct tag_rf_config
  * @param   taskID - task ID of event
  * @param   event - event value
  *
- * @return  0 - success.
+ * @return  0 - SUCCESS.
  */
 #define    tmos_clear_event  ((  bStatus_t  (*)  ( tmosTaskID taskID, tmosEvents event ))  BLE_LIB_JT(8))
 
@@ -2454,9 +2617,9 @@ typedef struct tag_rf_config
  * @param   event - event to be notified with
  * @param   time - timeout value
  *
- * @return  TRUE - success.
+ * @return  TRUE,FALSE.
  */
-#define    tmos_start_task  ((  bStatus_t  (*)  ( tmosTaskID taskID, tmosEvents event, tmosTimer time  ))  BLE_LIB_JT(9))
+#define    tmos_start_task  ((  BOOL  (*)  ( tmosTaskID taskID, tmosEvents event, tmosTimer time  ))  BLE_LIB_JT(9))
 
 /**
  * @brief   This function is called to start a timer to expire in n system clock time.
@@ -2479,7 +2642,7 @@ typedef struct tag_rf_config
  *
  * @param   None.
  *
- * @return  0 - success. 
+ * @return  SUCCESS.
  */
 #define    tmos_stop_task  ((  bStatus_t  (*)  ( tmosTaskID taskID, tmosEvents event ))  BLE_LIB_JT(10))
 
@@ -2508,7 +2671,7 @@ typedef struct tag_rf_config
  *
  * @param  *msg_ptr - point of msg
  *
- * @return  0 - success. 
+ * @return  SUCCESS.
  */
 #define    tmos_msg_deallocate  ((  bStatus_t  (*)  ( uint8_t *msg_ptr ))  BLE_LIB_JT(13))
 
@@ -2539,7 +2702,7 @@ typedef struct tag_rf_config
  *
  * @return  SUCCESS if successful, NV_OPER_FAILED if failed.
  */
-#define    tmos_snv_read  ((  bStatus_t  (*)  ( uint8_t id, uint8_t len, void *pBuf))  BLE_LIB_JT(107) )
+#define    tmos_snv_read  ((  bStatus_t  (*)  ( tmosSnvId_t id, tmosSnvLen_t len, void *pBuf))  BLE_LIB_JT(107) )
 
 /**
  * @brief   tmos system timer initialization
@@ -2549,9 +2712,18 @@ typedef struct tag_rf_config
  * @param   fnGetClock - 0:system clock select RTC timer
  *                   valid:system clock select extend input
  *
- * @return  Command Status.
+ * @return  SUCCESS if successful, FAILURE if failed.
  */
 #define    TMOS_TimerInit  ((  bStatus_t (*)  ( pfnGetSysClock fnGetClock ))  BLE_LIB_JT(16))
+
+/**
+ * @brief   interrupt handler.
+ *
+ * @param   None
+ *
+ * @return  None
+ */
+#define    TMOS_TimerIRQHandler  (( void (*) ( void )) BLE_LIB_JT(120) )
 
 /**
  * @brief   Process system
@@ -2560,7 +2732,7 @@ typedef struct tag_rf_config
  *
  * @return  None.
  */
-#define    TMOS_SystemProcess  ((  void  (*)  ( void ))  BLE_LIB_JT(17))
+#define    TMOS_SystemProcess  ((  void  (*)  ( void ))  BLE_LIB_RAM_JT(0))
 
 /**
  * @brief   Get current system clock
@@ -2581,12 +2753,7 @@ typedef struct tag_rf_config
 #define    TMOS_ProcessEventRegister  ((  tmosTaskID (*)  ( pTaskEventHandlerFn eventCb ))  BLE_LIB_JT(19))
 
 /**
- * @brief   resv
- */
-#define    TMOS_Set32KTuneValue  ((  void  (*)  ( uint16_t flash_val, uint16_t ram_val ))  BLE_LIB_JT(120) )
-
-/**
- * @brief   Add a device address into white list ( support 16 MAX )
+ * @brief   Add a device address into white list ( support SNVNum MAX )
  *
  * @param   addrType - Type of device address
  * @param   devAddr  - first address of device address
@@ -2721,6 +2888,24 @@ typedef struct tag_rf_config
 #define    BLE_LibInit  ((  bStatus_t  (*)  ( bleConfig_t* pCfg ))  BLE_LIB_JT(28))
 
 /**
+ * @brief   interrupt handler.
+ *
+ * @param   None
+ *
+ * @return  None
+ */
+#define    BB_IRQLibHandler  (( void (*) ( void )) BLE_LIB_RAM_JT(1) )
+
+/**
+ * @brief   interrupt handler.
+ *
+ * @param   None
+ *
+ * @return  None
+ */
+#define    LLE_IRQLibHandler   (( void (*) ( void )) BLE_LIB_RAM_JT(2) )
+
+/**
  * @brief   generate a valid access address
  *
  * @param   None.
@@ -2732,7 +2917,7 @@ typedef struct tag_rf_config
  * It shall not be a sequence that differ s from the advertising channel packets' Access Address by only one bit.
  * It shall not have all four octets equal.
  * It shall have no more  than 24 transitions.
- * It shall have a minimum of two transitio ns in the most significant six bits.
+ * It shall have a minimum of two transitions in the most significant six bits.
  */
 #define    BLE_AccessAddressGenerate  ((  void  (*)  ( void ))  BLE_LIB_JT(29))
 
@@ -3124,7 +3309,7 @@ typedef struct tag_rf_config
  *
  *          The Read Response only contains a Characteristic Value that
  *          is less than or equal to (ATT_MTU ?1) octets in length. If 
- *          the Characteristic Value is greater than (ATT_MTU ?1) octets
+ *          the Characteristic Value is greater than (ATT_MTU - 1) octets
  *          in length, the Read Long Characteristic Value procedure may
  *          be used if the rest of the Characteristic Value is required.
  *
@@ -3425,7 +3610,7 @@ typedef struct tag_rf_config
  * @note    The 'pReqs' pointer will be freed when the sub-procedure is complete.
  *
  * @param   connHandle - connection to use
- * @param   pReqs - pointer to requests to be sent (must be allocated)
+ * @param   pReqs - pointer to requests to be sent
  * @param   numReqs - number of requests in pReq
  * @param   flags - execute write request flags
  * @param   taskId - task to be notified of response
@@ -3439,6 +3624,7 @@ typedef struct tag_rf_config
  *          bleTimeout: Previous transaction timed out.<BR>
  */
 #define    GATT_ReliableWrites  ((  bStatus_t  (*)  ( uint16_t connHandle, attPrepareWriteReq_t *pReqs,uint8_t numReqs, uint8_t flags, uint8_t taskId ))  BLE_LIB_JT(56) )
+
 /**
  * @brief   This sub-procedure is used to read a characteristic descriptor
  *          from a server when the client knows the characteristic descriptor
@@ -3880,6 +4066,28 @@ typedef struct tag_rf_config
 #define    GAPBondMgr_PasscodeRsp  ((  bStatus_t  (*)  ( uint16_t connectionHandle, uint8_t status, uint32_t passcode ))  BLE_LIB_JT(79) )
 
 /**
+ * @brief   Respond to a passcode request.
+ *
+ * @param   connHandle - connection handle of the connected device or 0xFFFF if all devices in database.
+ * @param   status - SUCCESS if oob data is available, otherwise see @ref SMP_PAIRING_FAILED_DEFINES.
+ * @param   oob - containing the oob data.
+ * @param   c_peer - containing the peer confirm.
+ *
+ * @return  SUCCESS - bond record found and changed
+ *          bleIncorrectMode - Link not found.
+ */
+#define   GAPBondMgr_OobRsp ((  bStatus_t (*) ( uint16_t connHandle, uint8_t status, uint8_t *oob, uint8_t * c_peer )£©  BLE_LIB_JT(139) )
+
+/**
+ * @brief   Initialization function for the ecc-function callback.
+ *
+ * @param   pEcc - callback registration Structure @ref gapEccCBs_t.
+ *
+ * @return  null.
+ */
+#define   GAPBondMgr_EccInit  ((  void  (*) ( gapEccCBs_t *pEcc )£©  BLE_LIB_JT(140) )
+
+/**
  * @brief   Send a security request
  *
  * @param   connHandle - connection handle
@@ -3997,7 +4205,7 @@ typedef struct tag_rf_config
  *                     set BIT1:The Host has no preference among the receiver PHYs supported by the Controller
  * @param   tx_phys - a bit field that indicates the transmitter PHYs.(GAP_PHY_BIT_TYPE)
  * @param   rx_phys - a bit field that indicates the receiver PHYs.(GAP_PHY_BIT_TYPE)
- * @param   phy_options - preferred coding when transmitting on the LE Coded PHY(0:no preferred 1:S=2 2:S=8)
+ * @param   phy_options - preferred coding when transmitting on the LE Coded PHY(GAP_PHY_OPTIONS_TYPE)
  *
  * @return  SUCCESS: PHY update started started .<BR>
  *          bleIncorrectMode: No connection to update.<BR>
@@ -4050,7 +4258,7 @@ typedef struct tag_rf_config
  *
  * @brief   Initialization function for the GAP Role Task.
  *
- * @param   the ID assigned by tmos.This ID should be used to send messages and set timers.
+ * @param   None.
  *
  * @return  SUCCESS,bleInvalidRange
  */
@@ -4082,7 +4290,7 @@ typedef struct tag_rf_config
  *
  * @brief   Observer Profile Task initialization function.
  *
- * @param   taskId - Task ID.
+ * @param   None.
  *
  * @return  SUCCESS,bleInvalidRange
  */
@@ -4133,7 +4341,7 @@ typedef struct tag_rf_config
  *          initialization/setup, table initialization, power up
  *          notificaiton ... ).
  *
- * @param   the ID assigned by tmos.This ID should be used to send messages and set timers.
+ * @param   None.
  *
  * @return  SUCCESS,bleInvalidRange
  */
@@ -4171,7 +4379,7 @@ typedef struct tag_rf_config
  *
  * @brief   Central Profile Task initialization function.
  *
- * @param   taskId - Task ID.
+ * @param   None.
  *
  * @return  SUCCESS,bleInvalidRange
  */

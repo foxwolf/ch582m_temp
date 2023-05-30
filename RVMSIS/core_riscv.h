@@ -4,8 +4,10 @@
  * Version            : V1.0.1
  * Date               : 2021/10/28
  * Description        : CH583 RISC-V Core Peripheral Access Layer Header File
+ *********************************************************************************
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * SPDX-License-Identifier: Apache-2.0
+ * Attention: This software (modified or not) and binary are used for 
+ * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 #ifndef __CORE_RV3A_H__
 #define __CORE_RV3A_H__
@@ -38,7 +40,7 @@ typedef enum
 } FlagStatus, ITStatus;
 
 /* memory mapped structure for Program Fast Interrupt Controller (PFIC) */
-typedef struct __attribute__((packed))
+typedef struct
 {
     __I uint32_t  ISR[8];           // 0
     __I uint32_t  IPR[8];           // 20H
@@ -66,7 +68,7 @@ typedef struct __attribute__((packed))
 } PFIC_Type;
 
 /* memory mapped structure for SysTick */
-typedef struct __attribute__((packed))
+typedef struct
 {
     __IO uint32_t CTLR;
     __IO uint32_t SR;
@@ -82,17 +84,17 @@ typedef struct __attribute__((packed))
 #define PFIC_KEY3               ((uint32_t)0xBEEF0000)
 
 /* ##########################   define  #################################### */
-#define __nop()                 __asm volatile("nop")
+#define __nop()                 __asm__ volatile("nop")
 
 #define read_csr(reg)           ({unsigned long __tmp;                        \
-     asm volatile ("csrr %0, " #reg : "=r"(__tmp));                 \
+     __asm__ volatile ("csrr %0, " #reg : "=r"(__tmp));                 \
          __tmp; })
 
 #define write_csr(reg, val)     ({                                      \
     if (__builtin_constant_p(val) && (unsigned long)(val) < 32)    \
-      asm volatile ("csrw  " #reg ", %0" :: "i"(val));              \
+      __asm__ volatile ("csrw  " #reg ", %0" :: "i"(val));              \
     else                                                            \
-      asm volatile ("csrw  " #reg ", %0" :: "r"(val)); })
+      __asm__ volatile ("csrw  " #reg ", %0" :: "r"(val)); })
 
 #define PFIC_EnableAllIRQ()     write_csr(0x800, 0x88)
 #define PFIC_DisableAllIRQ()    write_csr(0x800, 0x80)
@@ -321,7 +323,7 @@ __attribute__((always_inline)) RV_STATIC_INLINE void __SEV(void)
 __attribute__((always_inline)) RV_STATIC_INLINE void __WFI(void)
 {
     PFIC->SCTLR &= ~(1 << 3); // wfi
-    __asm volatile("wfi");
+    __asm__ volatile("wfi");
 }
 
 /*********************************************************************
@@ -332,9 +334,9 @@ __attribute__((always_inline)) RV_STATIC_INLINE void __WFI(void)
 __attribute__((always_inline)) RV_STATIC_INLINE void __WFE(void)
 {
     PFIC->SCTLR |= (1 << 3) | (1 << 5); // (wfi->wfe)+(__sev)
-    __asm volatile("wfi");
+    __asm__ volatile("wfi");
     PFIC->SCTLR |= (1 << 3);
-    __asm volatile("wfi");
+    __asm__ volatile("wfi");
 }
 
 /*********************************************************************
@@ -348,6 +350,7 @@ RV_STATIC_INLINE void PFIC_SystemReset(void)
 }
 
 #define SysTick_LOAD_RELOAD_Msk    (0xFFFFFFFFFFFFFFFF)
+#define SysTick_CTLR_SWIE          (1 << 31)
 #define SysTick_CTLR_INIT          (1 << 5)
 #define SysTick_CTLR_MODE          (1 << 4)
 #define SysTick_CTLR_STRE          (1 << 3)

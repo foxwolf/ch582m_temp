@@ -4,8 +4,10 @@
  * Version            : V1.2
  * Date               : 2022/01/18
  * Description        : 硬件任务处理函数及BLE和硬件初始化
+ *********************************************************************************
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * SPDX-License-Identifier: Apache-2.0
+ * Attention: This software (modified or not) and binary are used for 
+ * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
 /******************************************************************************/
@@ -32,11 +34,11 @@ void Lib_Calibration_LSI(void)
 /*******************************************************************************
  * @fn      Lib_Read_Flash
  *
- * @brief   Lib 操作Flash回调
+ * @brief   Callback function used for BLE lib.
  *
- * @param   addr.
- * @param   num.
- * @param   pBuf.
+ * @param   addr - Read start address
+ * @param   num - Number of units to read (unit: 4 bytes)
+ * @param   pBuf - Buffer to store read data
  *
  * @return  None.
  */
@@ -49,17 +51,17 @@ uint32_t Lib_Read_Flash(uint32_t addr, uint32_t num, uint32_t *pBuf)
 /*******************************************************************************
  * @fn      Lib_Write_Flash
  *
- * @brief   Lib 操作Flash回调
+ * @brief   Callback function used for BLE lib.
  *
- * @param   addr.
- * @param   num.
- * @param   pBuf.
+ * @param   addr - Write start address
+ * @param   num - Number of units to write (unit: 4 bytes)
+ * @param   pBuf - Buffer with data to be written
  *
  * @return  None.
  */
 uint32_t Lib_Write_Flash(uint32_t addr, uint32_t num, uint32_t *pBuf)
 {
-    EEPROM_ERASE(addr, EEPROM_PAGE_SIZE * 2);
+    EEPROM_ERASE(addr, num * 4);
     EEPROM_WRITE(addr, pBuf, num * 4);
     return 0;
 }
@@ -225,7 +227,7 @@ void HAL_Init()
 #if(defined BLE_CALIBRATION_ENABLE) && (BLE_CALIBRATION_ENABLE == TRUE)
     tmos_start_task(halTaskID, HAL_REG_INIT_EVENT, MS1_TO_SYSTEM_TIME(BLE_CALIBRATION_PERIOD)); // 添加校准任务，单次校准耗时小于10ms
 #endif
-//  tmos_start_task( halTaskID, HAL_TEST_EVENT, 1600 );    // 添加一个测试任务
+    //  tmos_start_task( halTaskID, HAL_TEST_EVENT, 1600 );    // 添加一个测试任务
 }
 
 /*******************************************************************************
