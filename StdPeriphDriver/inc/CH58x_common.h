@@ -4,8 +4,10 @@
  * Version            : V1.2
  * Date               : 2021/11/17
  * Description
+ *********************************************************************************
  * Copyright (c) 2021 Nanjing Qinheng Microelectronics Co., Ltd.
- * SPDX-License-Identifier: Apache-2.0
+ * Attention: This software (modified or not) and binary are used for 
+ * microcontroller manufactured by Nanjing Qinheng Microelectronics.
  *******************************************************************************/
 
 
@@ -57,10 +59,14 @@
 /**
  * @brief  32K ±÷”£®Hz£©
  */
+#ifdef CLK_OSC32K
 #if ( CLK_OSC32K == 1 )
-#define CAB_LSIFQ     	32000
+#define CAB_LSIFQ       32000
 #else
-#define CAB_LSIFQ     	32768
+#define CAB_LSIFQ       32768
+#endif
+#else
+#define CAB_LSIFQ       32000
 #endif
 
 #include <string.h>
